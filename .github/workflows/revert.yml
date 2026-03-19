@@ -1,0 +1,21 @@
+name: Revert
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  revert:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check previous version exists
+        run: git ls-remote --exit-code origin previous
+
+      - name: Restore previous version to gh-pages
+        run: |
+          git fetch origin previous
+          git push origin refs/remotes/origin/previous:refs/heads/gh-pages --force

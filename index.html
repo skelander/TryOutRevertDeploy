@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deploy Control</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f1f5f9;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      width: 360px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+    }
+    h1 { font-size: 1.25rem; font-weight: 600; color: #0f172a; margin-bottom: 6px; }
+    .subtitle { font-size: 0.875rem; color: #64748b; margin-bottom: 24px; }
+    label { display: block; font-size: 0.8125rem; font-weight: 500; color: #374151; margin-bottom: 4px; }
+    input {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.875rem;
+      margin-bottom: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
+    button {
+      width: 100%;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    button:hover:not(:disabled) { background: #1d4ed8; }
+    button:disabled { opacity: 0.5; cursor: default; }
+    .error { color: #ef4444; font-size: 0.8125rem; margin-top: 10px; }
+    .sha {
+      display: inline-block;
+      font-family: monospace;
+      font-size: 0.75rem;
+      background: #f1f5f9;
+      color: #64748b;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 24px;
+    }
+    .status { font-size: 0.8125rem; margin-top: 12px; text-align: center; min-height: 1.25rem; }
+    #login-view, #dashboard-view { display: none; }
+    #login-view.active, #dashboard-view.active { display: block; }
+  </style>
+</head>
+<body>
+  <div class="card">
+
+    <div id="login-view" class="active">
+      <h1>Deploy Control</h1>
+      <p class="subtitle">Sign in to manage deployments.</p>
+      <label for="username">Username</label>
+      <input type="text" id="username" autocomplete="username">
+      <label for="password">Password</label>
+      <input type="password" id="password" autocomplete="current-password">
+      <button onclick="login()">Sign in</button>
+      <p class="error" id="login-error"></p>
+    </div>
+
+    <div id="dashboard-view">
+      <h1>Deploy Control</h1>
+      <p class="subtitle">Current live version</p>
+      <div class="sha">__BUILD_SHA__</div>
+      <button id="revert-btn" onclick="revert()">Revert to previous version</button>
+      <p class="status" id="status"></p>
+    </div>
+
+  </div>
+  <script>
+    const TOKEN = '__GITHUB_TOKEN__';
+    const OWNER = '__REPO_OWNER__';
+    const REPO  = '__REPO_NAME__';
+
+    document.getElementById('password').addEventListener('keydown', e => {
+      if (e.key === 'Enter') login();
+    });
+
+    function login() {
+      const u = document.getElementById('username').value;
+      const p = document.getElementById('password').value;
+      if (u === 'admin' && p === 'admin') {
+        document.getElementById('login-view').classList.remove('active');
+        document.getElementById('dashboard-view').classList.add('active');
+      } else {
+        document.getElementById('login-error').textContent = 'Invalid username or password.';
+      }
+    }
+
+    async function revert() {
+      const btn    = document.getElementById('revert-btn');
+      const status = document.getElementById('status');
+      btn.disabled    = true;
+      btn.textContent = 'Triggering revert…';
+      status.style.color = '#64748b';
+      status.textContent = '';
+      try {
+        const res = await fetch(
+          `https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/revert.yml/dispatches`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${TOKEN}`,
+              Accept: 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+            },
+            body: JSON.stringify({ ref: 'main' }),
+          }
+        );
+        if (res.status === 204) {
+          status.style.color = '#16a34a';
+          status.textContent = 'Revert triggered — previous version is deploying.';
+        } else {
+          throw new Error(`GitHub API returned ${res.status}`);
+        }
+      } catch (e) {
+        status.style.color = '#ef4444';
+        status.textContent = e.message;
+        btn.disabled    = false;
+        btn.textContent = 'Revert to previous version';
+      }
+    }
+  </script>
+</body>
+</html>

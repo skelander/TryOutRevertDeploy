@@ -1,0 +1,37 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Save current live version as previous
+        run: |
+          if git ls-remote --exit-code origin gh-pages > /dev/null 2>&1; then
+            git fetch origin gh-pages
+            git push origin refs/remotes/origin/gh-pages:refs/heads/previous --force
+          fi
+
+      - name: Build
+        run: |
+          mkdir dist
+          sed \
+            -e 's|__GITHUB_TOKEN__|${{ secrets.GH_WORKFLOW_TOKEN }}|g' \
+            -e 's|__REPO_OWNER__|${{ github.repository_owner }}|g' \
+            -e 's|__REPO_NAME__|${{ github.event.repository.name }}|g' \
+            -e 's|__BUILD_SHA__|${{ github.sha }}|g' \
+            index.html > dist/index.html
+
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: dist
+          force_orphan: true
