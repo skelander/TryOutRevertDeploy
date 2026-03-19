@@ -18,7 +18,7 @@
       background: white;
       border-radius: 12px;
       padding: 40px;
-      width: 360px;
+      width: 380px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
     }
     h1 { font-size: 1.25rem; font-weight: 600; color: #0f172a; margin-bottom: 6px; }
@@ -75,6 +75,8 @@
       <input type="text" id="username" autocomplete="username">
       <label for="password">Password</label>
       <input type="password" id="password" autocomplete="current-password">
+      <label for="gh-token">GitHub token <span style="color:#94a3b8;font-weight:400">(workflow scope)</span></label>
+      <input type="password" id="gh-token" placeholder="github_pat_…">
       <button onclick="login()">Sign in</button>
       <p class="error" id="login-error"></p>
     </div>
@@ -89,22 +91,25 @@
 
   </div>
   <script>
-    const TOKEN = '__GITHUB_TOKEN__';
     const OWNER = '__REPO_OWNER__';
     const REPO  = '__REPO_NAME__';
 
-    document.getElementById('password').addEventListener('keydown', e => {
+    document.getElementById('gh-token').addEventListener('keydown', e => {
       if (e.key === 'Enter') login();
     });
 
     function login() {
       const u = document.getElementById('username').value;
       const p = document.getElementById('password').value;
-      if (u === 'admin' && p === 'admin') {
+      const t = document.getElementById('gh-token').value.trim();
+      if (u === 'admin' && p === 'admin' && t) {
+        sessionStorage.setItem('gh_token', t);
         document.getElementById('login-view').classList.remove('active');
         document.getElementById('dashboard-view').classList.add('active');
-      } else {
+      } else if (u !== 'admin' || p !== 'admin') {
         document.getElementById('login-error').textContent = 'Invalid username or password.';
+      } else {
+        document.getElementById('login-error').textContent = 'GitHub token is required.';
       }
     }
 
@@ -121,7 +126,7 @@
           {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${TOKEN}`,
+              Authorization: `Bearer ${sessionStorage.getItem('gh_token')}`,
               Accept: 'application/vnd.github+json',
               'X-GitHub-Api-Version': '2022-11-28',
             },

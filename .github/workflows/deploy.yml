@@ -24,7 +24,6 @@ jobs:
         run: |
           mkdir dist
           sed \
-            -e 's|__GITHUB_TOKEN__|${{ secrets.GH_WORKFLOW_TOKEN }}|g' \
             -e 's|__REPO_OWNER__|${{ github.repository_owner }}|g' \
             -e 's|__REPO_NAME__|${{ github.event.repository.name }}|g' \
             -e 's|__BUILD_SHA__|${{ github.sha }}|g' \
